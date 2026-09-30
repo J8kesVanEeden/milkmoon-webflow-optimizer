@@ -1,8 +1,10 @@
 # Changelog
 
-## 6.0.0 — unreleased (branch `feat/v6.0`)
+## 6.0.0 — 2026-09-30
 
 **The Worker becomes reusable: any Webflow site on Cloudflare can install it with one secret.**
+Released as the **Milk Moon Webflow Optimizer** (MIT). First install: www.milkmoonstudio.com
+(0% pinned checks → 10% → 100% on 2026-09-30; full-site audit passed).
 
 - **Signed URLs replace site IDs.** Every Webflow CDN URL on a page becomes
   `/_img/<preset>/<sig>/<host><path>` (resized, AVIF/WebP per browser) or `/_wf/<sig>/<host><path>`
@@ -25,6 +27,19 @@
   (replaces the site-specific `X-MMS-Worker`).
 - Code split into modules: `config`, `sign`, `detect`, `webflow`, `urls`, `routes`, `rewrite`,
   `legacy`, `index`.
+- Hardening from an independent pre-release review: signature memo only grows from URLs the Worker
+  wrote, 2 KB cap on signed paths; attribute entities decoded before signing (`&amp;` in URLs,
+  `url(&quot;…&quot;)` CMS backgrounds); Webflow `ETag`/`Last-Modified` dropped from rewritten HTML;
+  a failed non-GET request is never re-sent; generic `octet-stream` replaced by the real type;
+  `<html>` inside a comment ignored by detection; transformer fallbacks cached 1 h, not 1 y.
+- `secrets.required: ["SIGNING_KEY"]` — deploys refuse to run without the key.
+
+## 5.4.1 — 2026-09-30 (rollout bridge)
+
+- 6.0-style `/_wf/` and `/_img/` URLs answered with a `302` to the same file on Webflow's CDN
+  (Webflow hosts only, `no-store`). Gradual deployments route each request — asset fetches too — to
+  a version independently, so without this a 10% 6.0 rollout (or a rollback) would have broken
+  assets on pages rendered by the other version. HTML otherwise byte-identical to 5.4.0.
 
 ## 5.x — single-site (www.milkmoonstudio.com)
 

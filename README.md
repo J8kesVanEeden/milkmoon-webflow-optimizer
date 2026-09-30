@@ -63,7 +63,22 @@ cloud), and a Cloudflare account on any plan.
    ```
    Commit — Cloudflare redeploys automatically. Use **only the host that serves your Webflow site**
    (not `*.yoursite.com/*`).
-3. **Check it** (below). That's it.
+3. **If your zone runs the Cloudflare OWASP Core Ruleset** (Managed Rules; Pro plan and up), add an
+   exception for the Worker's paths — otherwise OWASP rule `949110: Inbound Anomaly Score Exceeded`
+   treats the Webflow host name inside the paths as suspicious and shows some visitors (and Google's
+   renderers) a challenge instead of the image. This is safe: every request on these paths is
+   already verified by the Worker's signature. Steps (Cloudflare docs, *Add an exception in the
+   dashboard*):
+   1. Cloudflare dashboard → your domain → **Security rules** → **Create** → **Managed rules**.
+   2. **Exception name:** `Skip OWASP on Milk Moon Webflow Optimizer paths`.
+   3. **When incoming requests match** → edit the expression and paste:
+      `starts_with(http.request.uri.path, "/_wf/") or starts_with(http.request.uri.path, "/_img/")`
+   4. **Then:** *Skip specific rules from a Managed Ruleset* → **Select ruleset** → next to
+      *Cloudflare OWASP Core Ruleset* select **Select rules** → tick the header checkbox → **Select all
+      rules** → **Next** → **Deploy**.
+   5. Make sure the exception is listed **before** the rule that deploys the OWASP Core Ruleset
+      (exceptions only skip rules listed after them).
+4. **Check it** (below). That's it.
 
 <details><summary>Without the button (command line)</summary>
 
