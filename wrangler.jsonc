@@ -1,0 +1,37 @@
+/**
+ * Milk Moon Webflow Optimizer — Cloudflare Worker for Webflow sites on Cloudflare. See README.md.
+ *
+ * After the Deploy button (or `npm run deploy`) the Worker exists but is NOT on your site yet.
+ * Put it on your site by uncommenting `routes` below with YOUR Webflow host, then commit + push
+ * (or run `npm run deploy`). Put it only on the host that serves your Webflow site.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "milkmoon-webflow-optimizer",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+
+  // "routes": [
+  //   { "pattern": "www.example.com/*", "zone_name": "example.com" }
+  // ],
+
+  "workers_dev": false,
+
+  // Signed /_wf + /_img responses are served from Workers Cache without running the Worker.
+  // Everything else the Worker returns is marked no-store (src/index.js).
+  "cache": { "enabled": true, "cross_version_cache": true },
+
+  // The one required setting. Generate: `openssl rand -base64 36`
+  // Set: the Deploy button asks for it, or `npx wrangler secret put SIGNING_KEY`.
+  "secrets": { "required": ["SIGNING_KEY"] },
+
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+
+  // Everything here is optional — the defaults are in src/config.js and the README.
+  "vars": {
+    // "IMAGE_QUALITY": "85",
+    // "OG_FORMAT": "jpeg",
+    // "OG_QUALITY": "80",
+    // "HTML_EDGE_TTL": "0"   // >0 caches HTML in your zone; ONLY if the route covers nothing but Webflow
+  }
+}
