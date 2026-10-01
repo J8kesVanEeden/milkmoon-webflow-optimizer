@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.0.2 — 2026-10-01
+
+- **`/sitemap.xml` is served as `application/xml; charset=utf-8`.** Webflow labels it
+  `application/rss+xml`, which is the RSS feed type, not a sitemap. Only that exact path and that exact
+  mislabel are corrected (GET and HEAD, 2xx); body, caching headers and every other response are
+  unchanged.
+
 ## 6.0.1 — 2026-10-01
 
 Found by the second install (www.swellendamconservancy.org.za):

@@ -65,6 +65,28 @@ describe('everything else passes through untouched and is never pinned in Worker
     expect(res.headers.get('Cloudflare-CDN-Cache-Control')).toBe('no-store');
   });
 
+  it('Webflow\'s /sitemap.xml (sent as application/rss+xml) is relabelled application/xml, nothing else changes', async () => {
+    const SITEMAP = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>';
+    for (const method of ['GET', 'HEAD']) {
+      mock(ANY, '/sitemap.xml', method === 'GET' ? SITEMAP : '', { type: 'application/rss+xml; charset=utf-8', method, headers: { 'Last-Modified': 'Thu, 01 Oct 2026 11:17:06 GMT' } });
+      const res = await SELF.fetch(`${ANY}/sitemap.xml`, { method });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Content-Type')).toBe('application/xml; charset=utf-8');
+      expect(res.headers.get('Cache-Control')).toBe('max-age=1382400');
+      expect(res.headers.get('Last-Modified')).toBe('Thu, 01 Oct 2026 11:17:06 GMT');
+      expect(res.headers.get('Cloudflare-CDN-Cache-Control')).toBe('no-store');
+      expect(res.headers.get('x-edge-worker')).toBeNull();
+      if (method === 'GET') expect(await res.text()).toBe(SITEMAP);
+    }
+  });
+
+  it('application/rss+xml anywhere but /sitemap.xml (a real RSS feed) is left alone', async () => {
+    mock(ANY, '/blog/rss.xml', '<rss/>', { type: 'application/rss+xml' });
+    const res = await SELF.fetch(`${ANY}/blog/rss.xml`);
+    expect(res.headers.get('Content-Type')).toBe('application/rss+xml');
+    expect(await res.text()).toBe('<rss/>');
+  });
+
   it('non-HTML 404s, redirects and 5xx', async () => {
     mock(ANY, '/nope.png', 'nope', { type: 'image/png', status: 404 });
     const a = await SELF.fetch(`${ANY}/nope.png`);

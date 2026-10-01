@@ -46,12 +46,18 @@ async function setup(env) {
  * multi-day max-age on pages and sitemaps, and Workers Cache would otherwise honour it and keep
  * serving the old copy after a publish. Cloudflare strips this header before the browser.
  */
-function passthrough(res) {
+function passthrough(res, contentType) {
   if (res.status === 101 || res.webSocket) return res;
   const out = new Response(res.body, res);
   out.headers.set('Cloudflare-CDN-Cache-Control', 'no-store');
+  if (contentType) out.headers.set('Content-Type', contentType);
   return out;
 }
+
+// Webflow serves /sitemap.xml as application/rss+xml; a sitemap is plain XML (sitemaps.org). Only that
+// exact mislabel is corrected — any other sitemap Content-Type is left as the origin sent it.
+const isMislabelledSitemap = (url, res) =>
+  url.pathname === '/sitemap.xml' && res.ok && /^application\/rss\+xml\b/i.test(res.headers.get('Content-Type') || '');
 
 function fetchPage(request, config) {
   const cacheable = request.method === 'GET' || request.method === 'HEAD';
@@ -78,6 +84,7 @@ async function handle(request, env, ctx) {
   if (legacy) return legacy;
 
   const res = await fetchPage(request, s.config);
+  if (isMislabelledSitemap(url, res)) return passthrough(res, 'application/xml; charset=utf-8');
   if (request.method !== 'GET') return passthrough(res);
   if (!/text\/html/i.test(res.headers.get('Content-Type') || '')) return passthrough(res);
   // Webflow's 404 page is a full page of Webflow-CDN assets, billed like any other page.
