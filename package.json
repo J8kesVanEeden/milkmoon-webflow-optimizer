@@ -10,7 +10,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.19",
     "vitest": "~3.2.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.145.0"
   },
   "description": "Milk Moon Webflow Optimizer: faster Webflow sites, smaller images, less Webflow bandwidth (Cloudflare Worker).",
   "license": "MIT",

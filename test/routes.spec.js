@@ -122,11 +122,55 @@ describe('imageOptions', () => {
 
 describe('/_img', () => {
   it('serves a signed image with Vary: Accept and immutable caching', async () => {
-    fetchMock.get(CDN).intercept({ path: '/abc/p.jpg' }).reply(200, 'JPG', { headers: { 'Content-Type': 'image/jpeg' } });
+    fetchMock.get(CDN).intercept({ path: '/abc/p.jpg' }).reply(200, 'WEBP', { headers: { 'Content-Type': 'image/webp' } });
+    fetchMock.get(CDN).intercept({ path: '/abc/p.jpg' }).reply(200, 'ORIGINAL-JPG', { headers: { 'Content-Type': 'image/jpeg' } });
     const res = await call(await imgPath('img', cdn('/abc/p.jpg'), signer), { headers: { Accept: 'image/webp' } });
     expect(res.status).toBe(200);
     expect(res.headers.get('Vary')).toBe('Accept');
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+    expect(await res.text()).toBe('WEBP');
+  });
+
+  // Found on install #2: a large, already-compressed camera JPEG re-encoded at quality 85 (no AVIF
+  // for very large images) came back 3.6 MB from a 1.9 MB original. Never send the heavier file.
+  it('serves the original when the converted image would be larger', async () => {
+    fetchMock.get(CDN).intercept({ path: '/abc/big.jpg' }).reply(200, 'CONVERTED-BUT-BIGGER', { headers: { 'Content-Type': 'image/webp' } });
+    fetchMock.get(CDN).intercept({ path: '/abc/big.jpg' }).reply(200, 'ORIGINAL', { headers: { 'Content-Type': 'image/jpeg' } });
+    const res = await call(await imgPath('img', cdn('/abc/big.jpg'), signer), { headers: { Accept: 'image/avif,image/webp,*/*' } });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('ORIGINAL');
+    expect(res.headers.get('Content-Type')).toBe('image/jpeg');
+    expect(res.headers.get('Vary')).toBe('Accept');
+    // Deterministic for this Accept: the original IS the best answer, so cache it normally.
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+  });
+
+  it('keeps the converted image when it is smaller or equal', async () => {
+    fetchMock.get(CDN).intercept({ path: '/abc/eq.jpg' }).reply(200, 'SAME', { headers: { 'Content-Type': 'image/avif' } });
+    fetchMock.get(CDN).intercept({ path: '/abc/eq.jpg' }).reply(200, 'ORIG', { headers: { 'Content-Type': 'image/jpeg' } });
+    const res = await call(await imgPath('img', cdn('/abc/eq.jpg'), signer), { headers: { Accept: 'image/avif' } });
+    expect(await res.text()).toBe('SAME');
+    expect(res.headers.get('Content-Type')).toBe('image/avif');
+  });
+
+  it('keeps the converted image if the original cannot be fetched for comparison', async () => {
+    fetchMock.get(CDN).intercept({ path: '/abc/o.jpg' }).reply(200, 'WEBP', { headers: { 'Content-Type': 'image/webp' } });
+    fetchMock.get(CDN).intercept({ path: '/abc/o.jpg' }).reply(503, 'down');
+    const res = await call(await imgPath('img', cdn('/abc/o.jpg'), signer), { headers: { Accept: 'image/webp' } });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('WEBP');
+  });
+
+  it('does not compare social-preview (og) images: their format is chosen for compatibility', async () => {
+    fetchMock.get(CDN).intercept({ path: '/abc/og.png' }).reply(200, 'JPEG-FOR-SOCIAL-BIGGER', { headers: { 'Content-Type': 'image/jpeg' } });
+    const res = await call(await imgPath('og', cdn('/abc/og.png'), signer));
+    expect(await res.text()).toBe('JPEG-FOR-SOCIAL-BIGGER');
+  });
+
+  it('HEAD does not fetch the original for comparison', async () => {
+    fetchMock.get(CDN).intercept({ path: '/abc/hd.jpg', method: 'HEAD' }).reply(200, '', { headers: { 'Content-Type': 'image/webp' } });
+    const res = await call(await imgPath('img', cdn('/abc/hd.jpg'), signer), { method: 'HEAD', headers: { Accept: 'image/webp' } });
+    expect(res.status).toBe(200);
   });
 
   it('falls back to the original bytes when the transformer fails', async () => {

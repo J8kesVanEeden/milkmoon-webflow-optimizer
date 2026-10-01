@@ -105,7 +105,7 @@ npm run deploy
 
 ```bash
 curl -sI https://www.yoursite.com/ | grep -i x-edge-worker
-# x-edge-worker: webflow-o2o/6.0.0
+# x-edge-worker: webflow-o2o/6.0.1
 ```
 
 Then view the page source: image addresses start with `https://www.yoursite.com/_img/` and

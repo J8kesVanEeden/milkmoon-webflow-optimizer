@@ -1,5 +1,16 @@
 # Changelog
 
+## 6.0.1 — 2026-10-01
+
+Found by the second install (www.swellendamconservancy.org.za):
+- **Never serves an image bigger than the original.** A large, already-compressed camera JPEG came back
+  3.6 MB from a 1.9 MB original (Cloudflare makes no AVIF for very large images, and re-encoding at
+  quality 85 grew it). The Worker now compares sizes on a cache miss and sends the smaller file.
+  Social-preview images are exempt (their format is chosen for compatibility).
+- `npm run dev` works again: `VERSION` moved to `src/version.js` (workerd rejects non-handler exports
+  from the entry module locally), and wrangler is 4.145 (4.113's local runtime predates the Worker's
+  compatibility date).
+
 ## 6.0.0 — 2026-09-30
 
 **The Worker becomes reusable: any Webflow site on Cloudflare can install it with one secret.**

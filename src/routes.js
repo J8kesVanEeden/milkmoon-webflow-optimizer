@@ -54,6 +54,29 @@ function cacheControl(config) {
     : `public, max-age=${config.BROWSER_TTL}, s-maxage=${config.EDGE_TTL}, immutable`;
 }
 
+// Returns whichever image response has fewer bytes; the converted one wins ties and whenever the
+// original can't be used. Bodies are buffered only when Content-Length is missing.
+async function smallerOf(converted, original) {
+  if (!original || !original.ok || !/^image\//i.test(original.headers.get('Content-Type') || '')) {
+    if (original && original.body) await original.body.cancel();
+    return converted;
+  }
+  const sized = async (res) => {
+    const n = parseInt(res.headers.get('Content-Length') || '', 10);
+    if (Number.isFinite(n)) return { res, n };
+    const buf = await res.arrayBuffer();
+    return { res: new Response(buf, res), n: buf.byteLength };
+  };
+  const c = await sized(converted);
+  const o = await sized(original);
+  if (o.n < c.n) {
+    if (c.res.body) await c.res.body.cancel();
+    return o.res;
+  }
+  if (o.res.body) await o.res.body.cancel();
+  return c.res;
+}
+
 async function originFetch(href, method, cf) {
   try {
     return await fetch(href, { method, cf });
@@ -89,6 +112,14 @@ export async function handleSigned(request, url, config, signer) {
   }
   if (!origin) return plain(502, 'Origin fetch failed');
   if (!origin.ok) return originError(origin.status);
+
+  // Never send a converted image heavier than the original. A large, already-compressed camera JPEG
+  // re-encoded at our quality can GROW (no AVIF for very large images): 1.9 MB → 3.6 MB seen live.
+  // The original comes from the edge cache after its first fetch; this only runs on a Workers Cache
+  // miss. Social-preview (og) images are exempt: their format is chosen for platform compatibility.
+  if (transform && !fellBack && method === 'GET' && target.preset !== 'og') {
+    origin = await smallerOf(origin, await originFetch(target.url.href, 'GET', plainCf));
+  }
 
   // Generic/missing types are replaced by the real one: with nosniff, a script or stylesheet served
   // as octet-stream would be blocked by the browser (older S3-backed Webflow hosts do this).

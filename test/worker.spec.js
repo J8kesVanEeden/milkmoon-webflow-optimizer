@@ -3,7 +3,8 @@
  * override wrangler.jsonc, so this suite runs the same in the public template). Unit behaviour lives in the per-module specs.
  */
 import { SELF, fetchMock, env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
-import worker, { VERSION } from '../src/index.js';
+import worker from '../src/index.js';
+import { VERSION } from '../src/version.js';
 import { makeSigner } from '../src/sign.js';
 import { wfPath, imgPath } from '../src/urls.js';
 import { beforeAll, afterEach, describe, it, expect } from 'vitest';

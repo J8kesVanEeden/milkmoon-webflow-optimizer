@@ -25,8 +25,8 @@ import { detectWebflow } from './detect.js';
 import { handleSigned } from './routes.js';
 import { handleLegacy } from './legacy.js';
 import { rewriteWebflowHtml } from './rewrite.js';
+import { VERSION } from './version.js';
 
-export const VERSION = '6.0.0';
 
 // Per-isolate: env is stable for a deployment, so config + signer (and its signature memo) are built
 // once per env object.
