@@ -189,7 +189,18 @@ class MediaElementHandler {
   async element(el) {
     for (const a of IMAGE_URL_ATTRS) await setIfChanged(el, a, (v) => toProxy(v, this.ctx, 'image'));
     for (const a of SRCSET_ATTRS) await setIfChanged(el, a, (v) => rewriteSrcset(v, this.ctx));
+    if (this.ctx.config.SIZES_AUTO && el.tagName === 'img') addSizesAuto(el);
   }
+}
+
+// sizes="auto" is only valid on lazy <img> (HTML spec): the layout is known by the time it loads.
+// Webflow's value stays as the fallback for browsers without `auto` support.
+function addSizesAuto(el) {
+  const sizes = el.getAttribute('sizes');
+  if (!sizes || !el.getAttribute('srcset')) return;
+  if ((el.getAttribute('loading') || '').trim().toLowerCase() !== 'lazy') return;
+  if (/^\s*auto\s*(,|$)/i.test(sizes)) return;
+  el.setAttribute('sizes', 'auto, ' + sizes.trim());
 }
 
 class PosterHandler {

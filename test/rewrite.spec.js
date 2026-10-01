@@ -303,3 +303,47 @@ describe('rewriteLinkHeader (Early Hints)', () => {
     expect(res.headers.get('Link')).toBe(`<${await wf(css)}>; rel=preload; as=style`);
   });
 });
+
+// SIZES_AUTO (opt-in): Webflow writes `sizes` from the Designer canvas, not from the rendered layout,
+// so lazy images often download copies several times too large (measured 2026-10-01: −35–48% bytes
+// on lazy images with `auto`). `sizes="auto, <webflow value>"` lets the browser use the real layout
+// width; browsers without `auto` support fall back to Webflow's value. Only valid with loading=lazy.
+describe('SIZES_AUTO', () => {
+  const on = parseConfig({ SIGNING_KEY: 'k'.repeat(32), SIZES_AUTO: 'true' }).config;
+  const src = `${CDN}/a.jpg`;
+  const set = `${CDN}/a-p-500.jpg 500w, ${CDN}/a.jpg 1600w`;
+  const body = (attrs) => `<html><body><img src="${src}" ${attrs} alt=""/></body></html>`;
+  const sizesOf = (html) => (html.match(/\ssizes="([^"]*)"/) || [])[1];
+
+  it('prefixes auto on lazy images that have srcset + sizes', async () => {
+    const { html } = await run(body(`loading="lazy" sizes="(max-width: 479px) 100vw, 300px" srcset="${set}"`), ctx('/', { config: on }));
+    expect(sizesOf(html)).toBe('auto, (max-width: 479px) 100vw, 300px');
+  });
+
+  it('is off by default (sizes untouched)', async () => {
+    const { html } = await run(body(`loading="lazy" sizes="100vw" srcset="${set}"`));
+    expect(sizesOf(html)).toBe('100vw');
+  });
+
+  it('never touches eager images (auto is only valid with loading=lazy)', async () => {
+    for (const a of [`sizes="100vw" srcset="${set}"`, `loading="eager" sizes="100vw" srcset="${set}"`]) {
+      const { html } = await run(body(a), ctx('/', { config: on }));
+      expect(sizesOf(html)).toBe('100vw');
+    }
+  });
+
+  it('leaves images without srcset or without sizes alone, and never doubles auto', async () => {
+    let { html } = await run(body(`loading="lazy" sizes="100vw"`), ctx('/', { config: on }));
+    expect(sizesOf(html)).toBe('100vw');
+    ({ html } = await run(body(`loading="lazy" srcset="${set}"`), ctx('/', { config: on })));
+    expect(sizesOf(html)).toBeUndefined();
+    ({ html } = await run(body(`loading="lazy" sizes="auto, 50vw" srcset="${set}"`), ctx('/', { config: on })));
+    expect(sizesOf(html)).toBe('auto, 50vw');
+  });
+
+  it('accepts LAZY in any case and leaves <source> elements alone', async () => {
+    const { html } = await run(`<html><body><picture><source sizes="100vw" srcset="${set}"/><img loading="LAZY" sizes="100vw" srcset="${set}" src="${src}"/></picture></body></html>`, ctx('/', { config: on }));
+    expect(html).toMatch(/<source sizes="100vw"/);
+    expect(html).toMatch(/<img loading="LAZY" sizes="auto, 100vw"/);
+  });
+});

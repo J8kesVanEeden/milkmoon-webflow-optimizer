@@ -45,6 +45,9 @@ export function parseConfig(env) {
     // edge-caches every HTML response on the route (cacheEverything) BEFORE Webflow detection can run —
     // only for routes that cover nothing but the Webflow site.
     HTML_EDGE_TTL: num(env.HTML_EDGE_TTL, 0, 0, 86400),
+    // Opt-in: lazy images get sizes="auto, <Webflow's value>" so the browser picks the srcset copy from
+    // the real layout width instead of Webflow's Designer guess (often far too large).
+    SIZES_AUTO: String(env.SIZES_AUTO ?? '').trim().toLowerCase() === 'true',
     LEGACY_ROUTES,
     WEBFLOW_SITE_IDS,
     LEGACY_DOMAIN,

@@ -187,6 +187,17 @@ def cmd_logs():
         report.append(f'### logs — ❌ Workers analytics query failed: {d["errors"][0]["message"][:200]}')
         failures.append('logs: Workers analytics query failed'); return
     rows = d['data']['viewer']['accounts'][0]['w']
+    # Image transformations this month vs the 5,000 free (account-wide; after that new variants fall
+    # back to the original image). Daily figures appear with a delay, so today may still read 0.
+    month = end.strftime('%Y-%m-01')
+    t = cf('/graphql', {'query': '{viewer{accounts(filter:{accountTag:"%s"}){t:imagesUniqueTransformations(limit:100,filter:{date_geq:"%s",date_leq:"%s"}){date transformations}}}}' % (ACCOUNT, month, end.strftime('%Y-%m-%d'))})
+    if not t.get('errors'):
+        used = sum(r['transformations'] for r in t['data']['viewer']['accounts'][0]['t'])
+        free = int(os.environ.get('IMAGES_FREE_TRANSFORMATIONS', '5000'))
+        report.append(f'### image transformations — {used:,} unique this month of {free:,} free ({100 * used / free:.0f}%)')
+        if used > 0.7 * free:
+            report.append('- ⚠️ over 70% of the free allowance: past it, new image variants fall back to the original until the month resets')
+            failures.append(f'image transformations at {100 * used / free:.0f}% of the free allowance')
     for s in SITES:
         probs, info = [], []
         mine = [r for r in rows if r['dimensions']['scriptName'] == s['worker']]

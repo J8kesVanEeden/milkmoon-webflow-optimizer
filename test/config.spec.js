@@ -15,7 +15,17 @@ describe('config', () => {
     // 0 = no HTML caching in the customer's zone (safe on any host; Webflow's own edge caches and
     // purges on publish). Opt in with a positive value only when the route covers only Webflow.
     expect(r.config.HTML_EDGE_TTL).toBe(0);
+    // Page-behaviour changes are opt-in (decided 2026-09-28).
+    expect(r.config.SIZES_AUTO).toBe(false);
     expect(Object.isFrozen(r.config)).toBe(true);
+  });
+
+  it('SIZES_AUTO is on only for an explicit "true"', () => {
+    expect(parseConfig({ SIGNING_KEY: KEY, SIZES_AUTO: 'true' }).config.SIZES_AUTO).toBe(true);
+    expect(parseConfig({ SIGNING_KEY: KEY, SIZES_AUTO: ' TRUE ' }).config.SIZES_AUTO).toBe(true);
+    for (const v of ['1', 'yes', 'false', '', undefined]) {
+      expect(parseConfig({ SIGNING_KEY: KEY, SIZES_AUTO: v }).config.SIZES_AUTO).toBe(false);
+    }
   });
 
   it('is not ok without a signing key, or with one under 32 chars', () => {

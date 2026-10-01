@@ -105,7 +105,7 @@ npm run deploy
 
 ```bash
 curl -sI https://www.yoursite.com/ | grep -i x-edge-worker
-# x-edge-worker: webflow-o2o/6.0.2
+# x-edge-worker: webflow-o2o/6.1.0
 ```
 
 Then view the page source: image addresses start with `https://www.yoursite.com/_img/` and
@@ -122,6 +122,7 @@ Set these as `vars` in `wrangler.jsonc`. Invalid values fall back to the default
 | `OG_FORMAT` | `jpeg` | Format for social-preview images (`og:image`, `twitter:image`): `jpeg`, `png` or `webp`. JPEG is safest for every platform. |
 | `OG_QUALITY` | `80` | Quality for social-preview images. |
 | `EDGE_TTL` / `BROWSER_TTL` | `31536000` | Seconds files are cached at the edge / in browsers (1 year; safe because Webflow file addresses change when files change). |
+| `SIZES_AUTO` | `false` | Set `true` to fix Webflow's image `sizes`: Webflow writes them from the Designer canvas, not from how the image really displays, so browsers often download a copy several times too large (or, now and then, too small). With this on, lazy-loaded images get `sizes="auto, …"` and the browser chooses from the real width. Browsers without `auto` support use Webflow's value as before. On our site: 35–48% fewer image bytes on lazy images. |
 | `HTML_EDGE_TTL` | `0` | Seconds to cache **pages** in your zone. Leave at `0` unless the route covers nothing but your Webflow site: a positive value caches every response on the route before the Worker can check it's a Webflow page. Webflow already caches pages and clears them when you publish. |
 | `SIGNING_KEY` | — | **Required secret.** Changing it gives every file a new address (a one-off cache refill). |
 

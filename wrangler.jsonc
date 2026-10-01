@@ -32,6 +32,7 @@
     // "IMAGE_QUALITY": "85",
     // "OG_FORMAT": "jpeg",
     // "OG_QUALITY": "80",
-    // "HTML_EDGE_TTL": "0"   // >0 caches HTML in your zone; ONLY if the route covers nothing but Webflow
+    // "HTML_EDGE_TTL": "0",  // >0 caches HTML in your zone; ONLY if the route covers nothing but Webflow
+    // "SIZES_AUTO": "true"   // lazy images pick their size from the real layout (often much lighter)
   }
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 6.1.0 — 2026-10-01
+
+- **`SIZES_AUTO` (opt-in): fixes Webflow's image `sizes`.** Webflow writes `sizes` from the Designer
+  canvas, not the rendered layout, so browsers pick srcset copies that are often far too large (e.g.
+  `100vw` on an image shown at 840 px → a 3,200 px download). With `SIZES_AUTO=true` every lazy `<img>`
+  with `srcset` + `sizes` gets `sizes="auto, <Webflow's value>"` (HTML standard; Chrome/Edge 126+,
+  Firefox 150+, Safari 27+; older browsers use Webflow's value). Eager images and `<source>` are never
+  touched. Measured in a real browser on two sites: lazy-image bytes −35% to −48% on our home/blog/
+  project pages, −21% on install #2's mobile homepage.
+
 ## 6.0.2 — 2026-10-01
 
 - **`/sitemap.xml` is served as `application/xml; charset=utf-8`.** Webflow labels it
