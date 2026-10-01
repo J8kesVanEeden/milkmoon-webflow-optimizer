@@ -33,6 +33,15 @@ gets the cached copy (Workers Cache — a repeat request is answered without run
 that it wrote itself (HMAC-SHA256 with your secret key). Nobody can use your domain to fetch other
 people's Webflow files or to generate image variants at your expense.
 
+## Measured on our own install (www.milkmoonstudio.com, v6.0.0)
+
+- The 66 image files on our homepage: **15,302 KB from Webflow → 4,169 KB through the Worker (−73%)**.
+- First 24 hours live: **0** Worker errors, **0.3%** of file requests refused (bots asking for
+  addresses the Worker never wrote), every one of 628 pages and 1,255 files checked and working.
+- Side by side with the same site served straight from Webflow, PageSpeed's image-delivery and
+  page-weight warnings were smaller with the Worker on every page we tested, and it never made a
+  score worse.
+
 ## Safe by default
 
 - **Only Webflow pages are touched.** A page is rewritten only if it carries Webflow's own
