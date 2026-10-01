@@ -148,6 +148,25 @@ For sites that ran the older Milk Moon Worker (v4/v5) there is a `LEGACY_ROUTES`
 - **Video** is never proxied (it needs range requests, which cached responses don't support yet).
 - **Lottie JSON** and fonts referenced from *inside* stylesheets still load from Webflow.
 
+## Optional: automatic monitoring
+
+Your copy of this repo includes a GitHub Actions monitor that checks your site on a schedule and opens
+a GitHub issue (GitHub emails you) if something breaks — for example if Webflow changes its markup —
+and closes it again when things are fine. It never changes your site. It does nothing until you set it up:
+
+1. Copy `monitor/sites.example.json` to `monitor/sites.json`, fill in your site, your Cloudflare
+   account ID (`npx wrangler whoami` shows it) and the version you run, then commit.
+2. Optional, for the daily Worker-health check: in Cloudflare create an account API token with one
+   permission, **Account Analytics → Read**, and add it to your GitHub repo as the Actions secret
+   `CF_API_TOKEN`. Without it that check is skipped.
+
+What runs: hourly — pages load, files and images are served by the Worker, nothing left un-rewritten,
+forged links refused; daily — every page in your sitemap and every file on them, plus a check for new
+outside hosts on your pages, plus (with the token) the Worker's error count; monthly — a "still alive"
+note. Schedules run from your default branch. In a **public** repo GitHub Actions is free, but GitHub
+pauses schedules after 60 days without commits; in a private repo the runs use your Actions minutes.
+When you update, change `version` in `monitor/sites.json` in the same commit.
+
 ## Updating
 
 Pull the latest version into your repo (or re-deploy from the button) — settings live in your

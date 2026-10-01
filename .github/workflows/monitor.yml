@@ -1,0 +1,73 @@
+# Scheduled monitor for every install in monitor/sites.json. Read-only: it never deploys or changes a
+# site. A failure opens a GitHub issue (GitHub emails the repo owner); the next green run closes it.
+# Plan + reasoning: docs/MONITORING-PLAN.md. Schedules only run from the default branch (main).
+name: monitor
+
+on:
+  schedule:
+    - cron: '17 * * * *'     # hourly live check (odd minute: top-of-hour schedules get delayed)
+    - cron: '23 1 * * *'     # daily 03:23 SAST: full audit, Webflow drift, fresh fixtures, logs
+    - cron: '41 6 1 * *'     # monthly heartbeat, so silence never means "monitor dead"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: live | daily | heartbeat
+        default: live
+
+permissions:
+  contents: read
+  issues: write
+  actions: read      # heartbeat counts the last month's runs
+
+concurrency:
+  group: monitor-${{ github.event.schedule || inputs.mode }}
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MONITOR_RUNBOOK: ${{ vars.MONITOR_RUNBOOK }}   # optional repo variable, appended to every alert
+      MODE: ${{ inputs.mode || (github.event.schedule == '17 * * * *' && 'live') || (github.event.schedule == '23 1 * * *' && 'daily') || 'heartbeat' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Templates ship without monitor/sites.json: nothing runs until an install adds its own.
+      - name: Configured?
+        run: |
+          if [ -f monitor/sites.json ]; then echo "CONFIGURED=1" >> "$GITHUB_ENV"
+          else echo "CONFIGURED=0" >> "$GITHUB_ENV"; echo "::notice::monitor/sites.json not found — monitor not set up, nothing to do (see README)."; fi
+
+      - name: Live check
+        if: env.CONFIGURED == '1' && env.MODE == 'live'
+        run: |
+          set +e
+          MONITOR_REPORT=report.md python3 scripts/monitor.py live
+          echo "STATUS=$?" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        if: env.CONFIGURED == '1' && env.MODE == 'daily'
+        with: { node-version: 22, cache: npm }
+
+      - name: Daily checks
+        if: env.CONFIGURED == '1' && env.MODE == 'daily'
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          set +e
+          bash scripts/monitor-daily.sh report.md
+          echo "STATUS=$?" >> "$GITHUB_ENV"
+
+      - name: Open, update or close the alert issue
+        if: env.CONFIGURED == '1' && env.MODE != 'heartbeat'
+        run: bash scripts/monitor-issue.sh "$MODE" "${STATUS:-1}" report.md
+
+      - name: Heartbeat
+        if: env.CONFIGURED == '1' && env.MODE == 'heartbeat'
+        run: bash scripts/monitor-issue.sh heartbeat 0 /dev/null
+
+      - name: Fail the run if a check failed (so it shows red in Actions)
+        if: env.CONFIGURED == '1' && env.MODE != 'heartbeat' && env.STATUS != '0'
+        run: exit 1

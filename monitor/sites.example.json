@@ -1,0 +1,19 @@
+{
+  "_comment": "Copy to monitor/sites.json and fill in your install(s). The monitor workflow does nothing until that file exists. account_id: Cloudflare dashboard \u2192 Account home \u2192 Account ID (or `npx wrangler whoami`). version: the x-edge-worker version you run; update it when you update.",
+  "account_id": "YOUR-CLOUDFLARE-ACCOUNT-ID",
+  "sites": [
+    {
+      "name": "mysite",
+      "url": "https://www.example.com",
+      "zone": "example.com",
+      "worker": "milkmoon-webflow-optimizer",
+      "version": "6.0.2",
+      "pages": [
+        "/",
+        "/contact"
+      ],
+      "untouched": [],
+      "turnstile_page": null
+    }
+  ]
+}
