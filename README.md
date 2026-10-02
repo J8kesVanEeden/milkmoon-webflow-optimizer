@@ -12,7 +12,9 @@ record is proxied, the orange cloud — "O2O"). It sits in front of your site an
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/J8kesVanEeden/milkmoon-webflow-optimizer)
 
 > Made by [Milk Moon Studio](https://www.milkmoonstudio.com) and running on our own site.
-> **Want us to set it up for you?** [Get in touch](https://www.milkmoonstudio.com).
+> **The full walkthrough** (why it saves Webflow bandwidth, how the caching works, every setting, with
+> diagrams): [Free Webflow image optimisation with Cloudflare (2026): our open-source O2O Worker](https://www.milkmoonstudio.com/post/optimize-webflow-with-cloudflare-images-assets-caching-in-2026).
+> **Want us to set it up for you?** [Get in touch](https://www.milkmoonstudio.com/contact-us).
 
 ---
 
@@ -104,9 +106,12 @@ npm run deploy
 ## Check it's working
 
 ```bash
-curl -sI https://www.yoursite.com/ | grep -i x-edge-worker
+curl -s -o /dev/null -D - https://www.yoursite.com/ | grep -i x-edge-worker
 # x-edge-worker: webflow-o2o/6.1.0
 ```
+
+(Use a normal GET as above: a `HEAD` request, e.g. `curl -I`, is passed straight through and never
+shows the header.)
 
 Then view the page source: image addresses start with `https://www.yoursite.com/_img/` and
 stylesheets with `https://www.yoursite.com/_wf/`. In your browser's network panel, images arrive as
@@ -170,19 +175,32 @@ When you update, change `version` in `monitor/sites.json` in the same commit.
 
 ## Updating
 
-Pull the latest version into your repo (or re-deploy from the button) — settings live in your
-`wrangler.jsonc` and your secret stays set. The `x-edge-worker` header shows which version you run.
+Merge the latest version of this repo into your copy and push; Cloudflare redeploys:
+
+```bash
+# in your copy; on a conflict in wrangler.jsonc keep YOUR routes and vars
+git pull --allow-unrelated-histories https://github.com/J8kesVanEeden/milkmoon-webflow-optimizer main
+git push
+```
+
+Your settings live in your `wrangler.jsonc` and your secret stays set. Don't press the
+Deploy button again: it creates a brand-new repo and a second Worker (no route, no settings, no key).
+The `x-edge-worker` header shows which version you run.
 
 ## Uninstall
 
-Remove the `routes` entry (or delete the Worker in the Cloudflare dashboard). Your site goes back to
-loading everything from Webflow immediately. Cached files are simply no longer used.
+1. Cloudflare dashboard → your domain → **Workers Routes** → delete the route (works immediately).
+2. Then remove (or comment out) `routes` in your `wrangler.jsonc` and commit, so the next deploy
+   doesn't put it back. Or delete the Worker altogether.
+
+Your site goes back to loading everything from Webflow straight away. Cached files are simply no longer
+used.
 
 ## Develop
 
 ```bash
 npm ci
-npm test            # runs in the real Workers runtime, incl. real pages from 5 Webflow sites
+npm test            # runs in the real Workers runtime, incl. 5 real pages from 4 Webflow sites
 echo 'SIGNING_KEY=local-dev-key-local-dev-key-local-dev' > .dev.vars
 npm run dev
 ```
